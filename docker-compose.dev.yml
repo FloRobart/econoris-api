@@ -1,32 +1,8 @@
 services:
-  econoris-db:
-    build:
-      context: ./Database
-      dockerfile: Dockerfile
-    image: econoris-db:latest
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - db_data:/var/lib/postgresql
-    networks:
-      - econoris-net
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} || exit 1"]
-      interval: 5s
-      timeout: 30s
-      retries: 5
-
-  econoris-server:
+  econoris-api:
     image: node:24-alpine
     working_dir: /app
     env_file: .env
-    depends_on:
-      econoris-db:
-        condition: service_healthy
     volumes:
       - ./:/app/
     command: sh -c "cd /app && npm run dev"
@@ -39,11 +15,8 @@ services:
     tmpfs:
       - /tmp:exec,nosuid,nodev
 
-volumes:
-  db_data:
-
 networks:
   flower-garden-net:
     external: true
   econoris-net:
-    driver: bridge
+    external: true
