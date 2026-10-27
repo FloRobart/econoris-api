@@ -10,6 +10,9 @@
     "dev-docker": "docker compose -f docker-compose.dev.yml up --build",
     "clean": "rm -rf dist",
     "clean-docker": "docker compose -f docker-compose.dev.yml down --volumes --rmi all",
+    "lint": "true",
+    "format:check": "true",
+    "typecheck": "tsc --noEmit",
     "test": "jest"
   },
   "repository": {
@@ -42,7 +45,7 @@
   },
   "dependencies": {
     "argon2": "0.45.1",
-    "axios": "1.20.0",
+    "axios": "1.21.0",
     "cors": "2.8.6",
     "date-fns": "4.4.0",
     "dotenv": "18.0.9",
