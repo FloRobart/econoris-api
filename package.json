@@ -10,8 +10,8 @@
     "dev-docker": "docker compose -f docker-compose.dev.yml up --build",
     "clean": "rm -rf dist",
     "clean-docker": "docker compose -f docker-compose.dev.yml down --volumes --rmi all",
-    "lint": "true",
-    "format:check": "true",
+    "lint": "echo true",
+    "format:check": "echo true",
     "typecheck": "tsc --noEmit",
     "test": "jest"
   },
