@@ -1,29 +1,9 @@
 services:
-  econoris-db:
-    image: florobart/econoris-db:latest
-    restart: always
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - db_data:/var/lib/postgresql
-    networks:
-      - econoris-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME} || exit 1"]
-      interval: 5s
-      timeout: 30s
-      retries: 5
-
-  econoris-server:
-    image: florobart/econoris-server:latest
+  econoris-api:
+    image: florobart/econoris-api:latest
     working_dir: /app
     restart: always
     env_file: .env
-    depends_on:
-      econoris-db:
-        condition: service_healthy
     networks:
       - flower-garden-net
       - econoris-net
@@ -40,16 +20,13 @@ services:
     tmpfs:
       - /tmp:exec,nosuid,nodev
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://econoris-server:80/ || exit 1"]
+      test: ["CMD-SHELL", "wget -q --spider http://econoris-api:80/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-volumes:
-  db_data:
 
 networks:
   flower-garden-net:
     external: true
   econoris-net:
-    driver: bridge
+    external: true

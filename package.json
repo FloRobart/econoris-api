@@ -1,5 +1,5 @@
 {
-  "name": "econoris",
+  "name": "econoris-api",
   "version": "2.2.3",
   "description": "Éconoris est une application web de gestion de finances personnelles.",
   "main": "src/server.ts",
@@ -10,18 +10,21 @@
     "dev-docker": "docker compose -f docker-compose.dev.yml up --build",
     "clean": "rm -rf dist",
     "clean-docker": "docker compose -f docker-compose.dev.yml down --volumes --rmi all",
+    "lint": "true",
+    "format:check": "true",
+    "typecheck": "tsc --noEmit",
     "test": "jest"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FloRobart/Econoris.git"
+    "url": "git+https://github.com/FloRobart/econoris-api.git"
   },
   "author": "FloRobart",
   "license": "GPL-3.0-only",
   "bugs": {
-    "url": "https://github.com/FloRobart/Econoris/issues"
+    "url": "https://github.com/FloRobart/econoris-api/issues"
   },
-  "homepage": "https://github.com/FloRobart/Econoris#readme",
+  "homepage": "https://github.com/FloRobart/econoris-api#readme",
   "devDependencies": {
     "@types/cors": "2.8.19",
     "@types/express": "5.0.6",
@@ -42,17 +45,17 @@
   },
   "dependencies": {
     "argon2": "0.45.1",
-    "axios": "1.20.0",
+    "axios": "1.21.0",
     "cors": "2.8.6",
     "date-fns": "4.4.0",
-    "dotenv": "18.0.8",
+    "dotenv": "18.0.9",
     "express": "5.3.0",
     "express-rate-limit": "8.7.1",
     "helmet": "8.3.0",
     "morgan": "1.12.1",
     "ms": "2.1.3",
     "node-cron": "4.6.0",
-    "nodemailer": "10.1.7",
+    "nodemailer": "10.2.1",
     "path": "0.12.7",
     "pg": "8.23.1",
     "strftime": "0.10.3",
