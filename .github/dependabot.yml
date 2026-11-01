@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    target-branch: dev
+    commit-message:
+      prefix: "chore(deps)"
+    # Wait before adopting a new release, to limit the risk of compromised packages
+    cooldown:
+      default-days: 7
+    # Open one pull request for minor and patch updates, and another one for major updates
+    groups:
+      minor-and-patch-updates:
+        update-types:
+          - "minor"
+          - "patch"
+      major-updates:
+        update-types:
+          - "major"
