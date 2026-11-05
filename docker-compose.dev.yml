@@ -3,6 +3,8 @@ services:
     image: node:24-alpine
     working_dir: /app
     env_file: .env
+    environment:
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
       - ./:/app/
     command: sh -c "cd /app && npm run dev"

@@ -1,32 +1,95 @@
+# Production only: no port is published, the API is only reachable through the Traefik reverse proxy.
+
 services:
   econoris-api:
-    image: florobart/econoris-api:latest
-    working_dir: /app
-    restart: always
+    image: florobart/econoris-api:${API_VERSION:-latest}
+    restart: unless-stopped
+
+    # Forwards stop signals to Node and reaps zombie processes, which Node does not do as PID 1
+    init: true
+
     env_file: .env
+    environment:
+      # Forced so that a wrong value in .env cannot disable the production behaviours (trust proxy, cron jobs)
+      APP_ENV: prod
+
+      # Files rather than variables, so the passwords do not appear in docker inspect
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      MAIL_PASSWORD_FILE: /run/secrets/mail_password
+
+    secrets:
+      - source: api_db_password
+        target: db_password
+      - source: api_mail_password
+        target: mail_password
+
     networks:
-      - flower-garden-net
-      - econoris-net
-    ports:
-      - ${APP_PORT:-}:80
-    security_opt:
-      - no-new-privileges:true
+      # Requests get in through this network, which only Traefik shares
+      - econoris-api-net
+      - econoris-database-net
+      # Outgoing calls only: emails and authentication server
+      - econoris-api-egress-net
+
+    # Privileges
+    # NET_BIND_SERVICE is not needed: Docker allows unprivileged processes to bind port 80 inside a container
+    user: "1800:1800"
     cap_drop:
       - ALL
-    cap_add:
-      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+
+    # Nothing is writable: the application only logs to stdout and never uses the filesystem.
+    # "ipc: none" also removes /dev/shm, the only writable location left by "read_only".
     read_only: true
-    user: "1800:1800"
-    tmpfs:
-      - /tmp:exec,nosuid,nodev
+    ipc: none
+
+    # Resource limits, to contain a denial of service or a memory leak
+    pids_limit: 100
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
+
+    # Core dumps would contain the secrets held in memory
+    ulimits:
+      core: 0
+
+    # Prevents the logs from filling up the disk of the host
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+    # Written in JavaScript because the image contains neither a shell nor wget
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://econoris-api:80/ || exit 1"]
-      interval: 10s
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:80/', { signal: AbortSignal.timeout(4000) }).then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1));"
+      interval: 30s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 15s
+
+# The top-level names are unique to this repository: the wrapper assembles every repository
+# in one project, where two repositories using the same name would share a single secret.
+secrets:
+  api_db_password:
+    file: ./secrets/db_password
+  api_mail_password:
+    file: ./secrets/mail_password
 
 networks:
-  flower-garden-net:
-    external: true
-  econoris-net:
-    external: true
+  econoris-api-net:
+    name: econoris-api-net
+    internal: true
+
+  # Same definition as in econoris-database: "name" makes both repositories join one network
+  econoris-database-net:
+    name: econoris-database-net
+    internal: true
+
+  # The API needs the outside, but a network with a gateway must not be shared with anyone
+  econoris-api-egress-net:
+    name: econoris-api-egress-net
