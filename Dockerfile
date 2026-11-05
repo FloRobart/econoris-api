@@ -7,7 +7,7 @@
 
 
 # Compile TypeScript to JavaScript
-FROM dhi.io/node:24-alpine3.23-dev AS builder
+FROM dhi.io/node:24-alpine3.23-dev@sha256:bef23378636b0574fc7048f6a5bf10ab89a5ddf853011c593cb33c092ad41dd3 AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json tsconfig.json ./
@@ -19,7 +19,7 @@ RUN npm run build
 
 
 # Install the production dependencies separately, because the runtime image does not contain npm
-FROM dhi.io/node:24-alpine3.23-dev AS production-dependencies
+FROM dhi.io/node:24-alpine3.23-dev@sha256:bef23378636b0574fc7048f6a5bf10ab89a5ddf853011c593cb33c092ad41dd3 AS production-dependencies
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -27,7 +27,7 @@ RUN npm ci --omit=dev --ignore-scripts
 
 
 # Final image: no shell, no package manager
-FROM dhi.io/node:24-alpine3.23 AS runner
+FROM dhi.io/node:24-alpine3.23@sha256:ea44fbd46a8e11a9ffb9b2bd5c6e4722fa507fb86fef0ee8d92a020ce7c850a5 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
