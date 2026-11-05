@@ -71,11 +71,11 @@ describe('AppConfig secrets tests', () => {
     it('Puts the database password read from the file in the connection URL', () => {
         process.env.DB_SCHEME = 'postgresql';
         process.env.DB_USER = 'econoris';
-        process.env.DB_HOST = 'econoris-db';
+        process.env.DB_HOST = 'econoris-database';
         process.env.DB_NAME = 'econoris';
         process.env.DB_PASSWORD_FILE = writeSecretFile('from-file\n');
 
-        expect(loadAppConfig().db_uri).toBe('postgresql://econoris:from-file@econoris-db:5432/econoris');
+        expect(loadAppConfig().db_uri).toBe('postgresql://econoris:from-file@econoris-database:5432/econoris');
     });
 
 
