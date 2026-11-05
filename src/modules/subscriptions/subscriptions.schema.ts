@@ -2,6 +2,34 @@ import { z, ZodDate, ZodNumber } from "zod";
 
 
 
+/* With these bounds, every date computed from a subscription stays valid for JavaScript and PostgreSQL:
+   an invalid date would keep the generation of its operations from ending (see insertMissingOperations) */
+const MIN_SUBSCRIPTION_DATE = new Date("1900-01-01");
+const MAX_SUBSCRIPTION_DATE = new Date("2100-12-31");
+const MAX_INTERVAL_VALUE = 365;
+
+/**
+ * Date of a subscription, sent by the client as a string.
+ */
+const SubscriptionDateSchema = z.preprocess<unknown, ZodDate>(
+    (val) => typeof val === "string" ? new Date(val) : val,
+    z.date().min(MIN_SUBSCRIPTION_DATE).max(MAX_SUBSCRIPTION_DATE),
+);
+
+/* Refused by the database too: checked here so that the client gets a 400 instead of a 500 */
+const END_DATE_BEFORE_START_DATE_ERROR = { error: "end_date must not be before start_date", path: ["end_date"] };
+
+/**
+ * Checks that a subscription does not end before it starts.
+ * @param subscription The subscription to check
+ * @returns true if the subscription has no end date or ends after its start date
+ */
+function endsAfterItStarts(subscription: { start_date: Date, end_date: Date | null }): boolean {
+    return subscription.end_date === null || subscription.end_date >= subscription.start_date;
+}
+
+
+
 /*========*/
 /* SELECT */
 /*========*/
@@ -33,13 +61,13 @@ export const SubscriptionsSchema = z.object({
 /*========*/
 /* INSERT */
 /*========*/
-export const SubscriptionsInsertSchema = SubscriptionsSchema.extend({
+/* Without its refinement: Zod cannot extend an object schema once it is refined */
+const SubscriptionsInsertObjectSchema = SubscriptionsSchema.extend({
     user_id: SubscriptionsSchema.shape.user_id.optional(),
 
-    start_date: z.preprocess<unknown, ZodDate>(
-        (val) => typeof val === "string" ? new Date(val) : val,
-        z.date(),
-    ),
+    interval_value: z.int().min(1).max(MAX_INTERVAL_VALUE).default(1),
+    start_date: SubscriptionDateSchema,
+    end_date: SubscriptionDateSchema.nullable().default(null),
 }).omit({
     id: true,
 
@@ -48,6 +76,8 @@ export const SubscriptionsInsertSchema = SubscriptionsSchema.extend({
     created_at: true,
     updated_at: true,
 });
+
+export const SubscriptionsInsertSchema = SubscriptionsInsertObjectSchema.refine(endsAfterItStarts, END_DATE_BEFORE_START_DATE_ERROR);
 
 
 
@@ -61,9 +91,9 @@ export const SubscriptionsIdUpdateSchema = z.object({
     ),
 });
 
-export const SubscriptionsUpdateSchema = SubscriptionsInsertSchema.extend({
+export const SubscriptionsUpdateSchema = SubscriptionsInsertObjectSchema.extend({
     id: SubscriptionsSchema.shape.id,
-});
+}).refine(endsAfterItStarts, END_DATE_BEFORE_START_DATE_ERROR);
 
 
 

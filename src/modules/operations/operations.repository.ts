@@ -1,6 +1,6 @@
 import { AppError } from "../../core/models/AppError.model";
 import { Database } from "../../core/models/Database.model";
-import { Operation, OperationInsert, OperationUpdate } from "./operations.types";
+import { Operation, OperationGeneratedInsert, OperationInsert, OperationUpdate } from "./operations.types";
 
 
 
@@ -89,12 +89,12 @@ export async function insertOperations(operationData: OperationInsert): Promise<
 }
 
 /**
- * Insert multiple operations for a user in bulk.
+ * Insert multiple operations generated from subscriptions, in bulk.
  * @param operations The array of operation data to insert.
  * @returns void
  * @throws AppError if there is an issue inserting the operations.
  */
-export async function insertBulkOperations(operations: OperationInsert[]): Promise<void> {
+export async function insertBulkOperations(operations: OperationGeneratedInsert[]): Promise<void> {
     if (operations.length === 0) return;
 
     try {

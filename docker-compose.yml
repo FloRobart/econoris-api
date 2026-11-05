@@ -13,21 +13,18 @@ services:
       # Forced so that a wrong value in .env cannot disable the production behaviours (trust proxy, cron jobs)
       APP_ENV: prod
 
-      # Files rather than variables, so the passwords do not appear in docker inspect
+      # A file rather than a variable, so the password does not appear in docker inspect
       DB_PASSWORD_FILE: /run/secrets/db_password
-      MAIL_PASSWORD_FILE: /run/secrets/mail_password
 
     secrets:
       - source: api_db_password
         target: db_password
-      - source: api_mail_password
-        target: mail_password
 
     networks:
       # Requests get in through this network, which only Traefik shares
       - econoris-api-net
       - econoris-database-net
-      # Outgoing calls only: emails and authentication server
+      # Outgoing calls only: authentication server
       - econoris-api-egress-net
 
     # Privileges
@@ -77,8 +74,6 @@ services:
 secrets:
   api_db_password:
     file: ./secrets/db_password
-  api_mail_password:
-    file: ./secrets/mail_password
 
 networks:
   econoris-api-net:

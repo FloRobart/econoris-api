@@ -48,8 +48,6 @@ Econoris est une application web developpee avec les technologies suivantes :
 - Frameworks et librairies :
   - [ExpressJS](https://www.npmjs.com/package/express)
   - [dotenv](https://www.npmjs.com/package/dotenv)
-  - [strftime](https://www.npmjs.com/package/strftime)
-  - [path](https://www.npmjs.com/package/path)
   - [node postgres](https://www.npmjs.com/package/pg)
 - Base de donnees :
   - [PostgreSQL](https://www.postgresql.org/)
@@ -66,9 +64,9 @@ Econoris est un projet open-source developpe uniquement par [Floris Robart](http
 
 # Report de bug et suggestions
 
-Si vous decouvrez une erreur, quelquelle soit, cela peut êgre une faute de frappe ou d'orthographe, une erreur de calcul, une erreur de conception, un bug qui empêche le bon fonctionnement de l'application, ou tout autre problème, Merci de me le signaler par mail à l'adresse [florobart.github@gmail.com](mailto:florobart.github@gmail.com). Toutes les erreurs, quelque soit leur nature ou leur importance, seront traitees le plus rapidement possible.
+Si vous decouvrez une erreur, quelquelle soit, cela peut êgre une faute de frappe ou d'orthographe, une erreur de calcul, une erreur de conception, un bug qui empêche le bon fonctionnement de l'application, ou tout autre problème, Merci de me le signaler par mail à l'adresse [contact@econoris.fr](mailto:contact@econoris.fr). Toutes les erreurs, quelque soit leur nature ou leur importance, seront traitees le plus rapidement possible.
 
-Si vous avez une une **suggestion**, une **idee**, une **amelioration**, ou une **demande de fonctionnalite**, merci de me la communiquer par mail à l'adresse [florobart.github@gmail.com](mailto:florobart.github@gmail.com). Toutes les suggestions, quelque soit leur nature ou leur importance, seront etudiees et prises en compte dans la mesure du possible.
+Si vous avez une une **suggestion**, une **idee**, une **amelioration**, ou une **demande de fonctionnalite**, merci de me la communiquer par mail à l'adresse [contact@econoris.fr](mailto:contact@econoris.fr). Toutes les suggestions, quelque soit leur nature ou leur importance, seront etudiees et prises en compte dans la mesure du possible.
 
 # License
 

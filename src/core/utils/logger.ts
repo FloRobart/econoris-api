@@ -1,105 +1,64 @@
 import AppConfig from '../../config/AppConfig';
-import { sendErrorEmail } from '../email/error.email';
-
-
-
-const errorMessage   = ` [❌] ${AppConfig.app_name} - ${new Date().toISOString()} |`;
-const warningMessage = ` [⚠️] ${AppConfig.app_name} - ${new Date().toISOString()} |`;
-const successMessage = ` [✅] ${AppConfig.app_name} - ${new Date().toISOString()} |`;
-const infoMessage    = ` [❕] ${AppConfig.app_name} - ${new Date().toISOString()} |`;
-const debugMessage   = ` [🐛] ${AppConfig.app_name} - ${new Date().toISOString()} |`;
 
 
 
 /**
- * Logger function to log messages based on the environment level.
- * @description
- * - If APP_ENV is 0, no logs will be displayed.
- * - If APP_ENV is 1, only error logs will be displayed.
- * - If APP_ENV is 2, warning and error logs will be displayed.
- * - If APP_ENV is 3, success, warning and error logs will be displayed.
- * - If APP_ENV is 4, info, success, warning and error logs will be displayed.
- * - If APP_ENV is 5, debug, info, success, warning and error logs will be displayed.
+ * Builds the beginning of a log line.
+ * The date is read on each call, so that every line carries the time it was written.
+ * @param icon Icon of the log level
+ * @returns The beginning of the log line
+ */
+function buildLinePrefix(icon: string): string {
+    return ` [${icon}] ${AppConfig.app_name} - ${new Date().toISOString()} |`;
+}
+
+
+/**
+ * Logs an error, unless APP_ENV contains "silent".
  * @param args elements to log
  */
 export function error(...args: any[]) {
     if (!AppConfig.app_env.includes('silent')) {
-        console.error(errorMessage, ...args);
-
-        if (AppConfig.app_env.includes('prod')) {
-            sendErrorEmail(...args).then(() => {
-                success("Error email sent successfully !");
-            }).catch((err: Error) => {
-                console.error(errorMessage, "Failed to send error email :", err);
-            });
-        }
+        console.error(buildLinePrefix('❌'), ...args);
     }
 }
 
 /**
- * Logger function to log messages based on the environment level.
- * @description
- * - If APP_ENV is 0, no logs will be displayed.
- * - If APP_ENV is 1, only error logs will be displayed.
- * - If APP_ENV is 2, warning and error logs will be displayed.
- * - If APP_ENV is 3, success, warning and error logs will be displayed.
- * - If APP_ENV is 4, info, success, warning and error logs will be displayed.
- * - If APP_ENV is 5, debug, info, success, warning and error logs will be displayed.
+ * Logs a warning, unless APP_ENV contains "silent".
  * @param args elements to log
  */
 export function warning(...args: any[]) {
     if (!AppConfig.app_env.includes('silent')) {
-        console.warn(warningMessage, ...args);
+        console.warn(buildLinePrefix('⚠️'), ...args);
     }
 }
 
 /**
- * Logger function to log messages based on the environment level.
- * @description
- * - If APP_ENV is 0, no logs will be displayed.
- * - If APP_ENV is 1, only error logs will be displayed.
- * - If APP_ENV is 2, warning and error logs will be displayed.
- * - If APP_ENV is 3, success, warning and error logs will be displayed.
- * - If APP_ENV is 4, info, success, warning and error logs will be displayed.
- * - If APP_ENV is 5, debug, info, success, warning and error logs will be displayed.
+ * Logs a success, unless APP_ENV contains "silent".
  * @param args elements to log
  */
 export function success(...args: any[]) {
     if (!AppConfig.app_env.includes('silent')) {
-        console.log(successMessage, ...args);
+        console.log(buildLinePrefix('✅'), ...args);
     }
 }
 
 /**
- * Logger function to log messages based on the environment level.
- * @description
- * - If APP_ENV is 0, no logs will be displayed.
- * - If APP_ENV is 1, only error logs will be displayed.
- * - If APP_ENV is 2, warning and error logs will be displayed.
- * - If APP_ENV is 3, success, warning and error logs will be displayed.
- * - If APP_ENV is 4, info, success, warning and error logs will be displayed.
- * - If APP_ENV is 5, debug, info, success, warning and error logs will be displayed.
+ * Logs an information, unless APP_ENV contains "silent".
  * @param args elements to log
  */
 export function info(...args: any[]) {
     if (!AppConfig.app_env.includes('silent')) {
-        console.info(infoMessage, ...args);
+        console.info(buildLinePrefix('❕'), ...args);
     }
 }
 
 /**
- * Logger function to log messages based on the environment level.
- * @description
- * - If APP_ENV is 0, no logs will be displayed.
- * - If APP_ENV is 1, only error logs will be displayed.
- * - If APP_ENV is 2, warning and error logs will be displayed.
- * - If APP_ENV is 3, success, warning and error logs will be displayed.
- * - If APP_ENV is 4, info, success, warning and error logs will be displayed.
- * - If APP_ENV is 5, debug, info, success, warning and error logs will be displayed.
+ * Logs a debug message, only when APP_ENV contains "dev" and not "silent".
  * @param args elements to log
  */
 export function debug(...args: any[]) {
     if (!AppConfig.app_env.includes('silent') && AppConfig.app_env.includes('dev')) {
-        console.debug(debugMessage, ...args);
+        console.debug(buildLinePrefix('🐛'), ...args);
     }
 }

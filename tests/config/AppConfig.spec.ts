@@ -42,7 +42,12 @@ describe('AppConfig secrets tests', () => {
     beforeEach(() => {
         process.env = { ...originalEnvironment };
         delete process.env.DB_PASSWORD_FILE;
-        delete process.env.MAIL_PASSWORD_FILE;
+
+        process.env.DB_SCHEME = 'postgresql';
+        process.env.DB_USER = 'econoris';
+        process.env.DB_HOST = 'econoris-database';
+        process.env.DB_NAME = 'econoris';
+
         temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'econoris-secrets-'));
     });
 
@@ -53,26 +58,15 @@ describe('AppConfig secrets tests', () => {
     });
 
 
-    it('Reads the secret from the variable when no file is given', () => {
-        process.env.MAIL_PASSWORD = 'from-variable';
+    it('Reads the database password from the variable when no file is given', () => {
+        process.env.DB_PASSWORD = 'from-variable';
 
-        expect(loadAppConfig().mail_password).toBe('from-variable');
+        expect(loadAppConfig().db_uri).toBe('postgresql://econoris:from-variable@econoris-database:5432/econoris');
     });
 
 
     it('Prefers the file to the variable, without its line break', () => {
-        process.env.MAIL_PASSWORD = 'from-variable';
-        process.env.MAIL_PASSWORD_FILE = writeSecretFile('from-file\n');
-
-        expect(loadAppConfig().mail_password).toBe('from-file');
-    });
-
-
-    it('Puts the database password read from the file in the connection URL', () => {
-        process.env.DB_SCHEME = 'postgresql';
-        process.env.DB_USER = 'econoris';
-        process.env.DB_HOST = 'econoris-database';
-        process.env.DB_NAME = 'econoris';
+        process.env.DB_PASSWORD = 'from-variable';
         process.env.DB_PASSWORD_FILE = writeSecretFile('from-file\n');
 
         expect(loadAppConfig().db_uri).toBe('postgresql://econoris:from-file@econoris-database:5432/econoris');

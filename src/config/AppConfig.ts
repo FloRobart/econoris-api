@@ -19,17 +19,14 @@ interface AppConfigInterface {
     /* Database */
     readonly db_uri: string;
 
-    /* Email */
-    readonly mail_service: string;
-    readonly mail_username: string;
-    readonly mail_password: string;
-
     /* Rate Limiting */
     readonly request_limit_per_second: number;
     readonly request_limit_time: number;
 
     /* Authentication */
     readonly auth_app_url: string;
+    /* Maximum wait for an answer of the authentication server, in milliseconds */
+    readonly auth_request_timeout: number;
 
     /* CORS */
     readonly corsOptions: {
@@ -71,17 +68,14 @@ const config: AppConfigInterface = {
     /* Database */
     db_uri: `${process.env.DB_SCHEME}://${process.env.DB_USER}:${readSecret('DB_PASSWORD')}@${process.env.DB_HOST}:5432/${process.env.DB_NAME}`,
 
-    /* Email */
-    mail_service: process.env.MAIL_SERVICE || 'gmail',
-    mail_username: process.env.MAIL_USERNAME || '',
-    mail_password: readSecret('MAIL_PASSWORD'),
-
     /* Rate Limiting */
     request_limit_per_second: Math.round(Number(process.env.REQUEST_LIMIT_PER_SECOND)) || 10,
     request_limit_time: (ms((process.env.REQUEST_LIMIT_TIME as StringValue) || "30min") || (30 * 60 * 1000)),
 
     /* Authentication */
     auth_app_url: process.env.AUTH_APP_URL || 'http://localhost:26001',
+    /* Without a limit, a slow authentication server would keep every request of the API waiting */
+    auth_request_timeout: 5000,
 
     /* CORS */
     corsOptions: {
