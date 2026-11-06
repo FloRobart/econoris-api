@@ -13,20 +13,6 @@ describe('AppConfig secrets tests', () => {
 
 
     /**
-     * Loads a fresh copy of AppConfig, because it reads the environment when it is imported.
-     */
-    function loadAppConfig() {
-        let appConfig;
-
-        jest.isolateModules(() => {
-            appConfig = require('../../src/config/AppConfig').default;
-        });
-
-        return appConfig as any;
-    }
-
-
-    /**
      * Writes a secret in the temporary directory.
      * @param content The content of the file
      * @returns The path of the file
@@ -79,3 +65,58 @@ describe('AppConfig secrets tests', () => {
         expect(() => loadAppConfig()).toThrow();
     });
 });
+
+
+
+/**
+ * AppConfig environment tests
+ */
+describe('AppConfig environment tests', () => {
+    const originalEnvironment = process.env;
+
+
+    beforeEach(() => {
+        process.env = { ...originalEnvironment };
+
+        /* Without this mock, dotenv would read APP_ENV from the .env file of the developer */
+        jest.doMock('dotenv', () => ({ config: jest.fn() }));
+    });
+
+
+    afterEach(() => {
+        process.env = originalEnvironment;
+        jest.dontMock('dotenv');
+    });
+
+
+    it('Uses the production behaviours when APP_ENV is not set', () => {
+        delete process.env.APP_ENV;
+
+        expect(loadAppConfig().app_env).toBe('prod');
+    });
+
+
+    it('Keeps the environment given by APP_ENV, in lower case', () => {
+        process.env.APP_ENV = 'DEV';
+
+        expect(loadAppConfig().app_env).toBe('dev');
+    });
+});
+
+
+
+/*=========*/
+/* HELPERS */
+/*=========*/
+/**
+ * Loads a fresh copy of AppConfig, because it reads the environment when it is imported.
+ */
+function loadAppConfig() {
+    let appConfig;
+
+    jest.isolateModules(() => {
+        appConfig = require('../../src/config/AppConfig').default;
+    });
+
+    return appConfig as any;
+}

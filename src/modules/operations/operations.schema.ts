@@ -1,4 +1,5 @@
 import { z, ZodDate, ZodNumber } from "zod";
+import { AmountSchema } from "../../core/schemas/amount.schema";
 
 
 
@@ -9,12 +10,12 @@ export const OperationsSchema = z.object({
     id: z.int().min(1),
     levy_date: z.date().default(new Date()),
     label: z.string().trim().min(1).max(255),
-    amount: z.number(),
+    amount: AmountSchema,
     category: z.string().trim().min(1).max(255),
 
     source: z.string().trim().max(255).nullable().default(null),
     destination: z.string().trim().max(255).nullable().default(null),
-    costs: z.number().default(0.0),
+    costs: AmountSchema.default(0.0),
     is_validate: z.boolean().default(false),
 
     user_id: z.int().min(1),

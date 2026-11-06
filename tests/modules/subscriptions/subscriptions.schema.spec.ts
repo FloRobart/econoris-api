@@ -17,6 +17,27 @@ describe('Subscriptions schemas tests', () => {
     };
 
 
+    /*========*/
+    /* LABELS */
+    /*========*/
+    describe('Labels', () => {
+        it('Refuses a blank label or category, which the generated operations would refuse', () => {
+            expect(() => SubscriptionsInsertSchema.parse({ ...subscriptionSentByClient, label: '   ' })).toThrow(ZodError);
+            expect(() => SubscriptionsInsertSchema.parse({ ...subscriptionSentByClient, category: '   ' })).toThrow(ZodError);
+        });
+
+
+        it('Trims the label like the label of an operation', () => {
+            expect(SubscriptionsInsertSchema.parse({ ...subscriptionSentByClient, label: '  Netflix  ' }).label).toBe('Netflix');
+        });
+
+
+        it('Applies the same rules to an update', () => {
+            expect(() => SubscriptionsUpdateSchema.parse({ ...subscriptionSentByClient, id: 1, label: '   ' })).toThrow(ZodError);
+        });
+    });
+
+
     /*==========*/
     /* INTERVAL */
     /*==========*/

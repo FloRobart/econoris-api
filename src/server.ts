@@ -28,23 +28,7 @@ import { disableEndedSubscriptionsJob } from './core/cron/disabled_ended_subscri
     /* Cron Jobs Setup */
     /*=================*/
     if (AppConfig.app_env.includes('prod')) {
-        cron.schedule('0 3 * * *', async () => {
-            try {
-                logger.info("Starting subscription operations generation job");
-                await generateSubscriptionOperationsJob();
-                logger.success("Subscription operations generation job completed");
-
-                logger.info("Starting operations validation job");
-                await validateOperationsJob();
-                logger.success("Operations validation job completed");
-
-                logger.info("Starting disable ended subscriptions job");
-                await disableEndedSubscriptionsJob();
-                logger.success("Disable ended subscriptions job completed");
-            } catch (error) {
-                logger.error(error);
-            }
-        });
+        cron.schedule('0 3 * * *', runNightlyJobs);
     }
 
 
@@ -65,3 +49,33 @@ import { disableEndedSubscriptionsJob } from './core/cron/disabled_ended_subscri
         process.exit(1);
     });
 })();
+
+
+
+/*===========*/
+/* CRON JOBS */
+/*===========*/
+/**
+ * Runs the nightly jobs one after the other.
+ * Each job runs even if the previous one failed: they do not depend on each other.
+ */
+async function runNightlyJobs(): Promise<void> {
+    await runJob("subscription operations generation", generateSubscriptionOperationsJob);
+    await runJob("operations validation", validateOperationsJob);
+    await runJob("disable ended subscriptions", disableEndedSubscriptionsJob);
+}
+
+/**
+ * Runs a job and logs how it ended. A failure is only logged, so that the next jobs still run.
+ * @param jobName The name of the job, for the logs
+ * @param job The job to run
+ */
+async function runJob(jobName: string, job: () => Promise<void>): Promise<void> {
+    try {
+        logger.info("Starting job :", jobName);
+        await job();
+        logger.success("Job completed :", jobName);
+    } catch (error) {
+        logger.error("Job failed :", jobName, error);
+    }
+}

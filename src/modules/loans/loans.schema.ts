@@ -1,4 +1,5 @@
 import { z, ZodDate, ZodNumber } from "zod";
+import { AmountSchema } from "../../core/schemas/amount.schema";
 
 
 
@@ -8,8 +9,8 @@ import { z, ZodDate, ZodNumber } from "zod";
 export const LoansSchema = z.object({
     id: z.int().min(1),
     loan_date: z.date().default(new Date()),
-    amount: z.number(),
-    refunded_amount: z.number().min(0).default(0.0),
+    amount: AmountSchema,
+    refunded_amount: AmountSchema.min(0).default(0.0),
 
     borrower: z.string().trim().min(1).max(255),
     reason: z.string().trim().min(1).max(255),

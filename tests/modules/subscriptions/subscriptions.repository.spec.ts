@@ -54,6 +54,16 @@ describe('Subscriptions repository tests', () => {
 
         expect(executeMock).toHaveBeenCalledWith({ text: expect.stringContaining('WHERE id = $1 AND user_id = $2'), values: [SUBSCRIPTION_ID, USER_ID] });
     });
+
+
+    it('Counts only the subscriptions of the user, as a number', async () => {
+        executeMock.mockResolvedValue([{ subscriptions_count: '12' }]);
+
+        const subscriptionsCount = await SubscriptionsRepository.countSubscriptions(USER_ID);
+
+        expect(executeMock).toHaveBeenCalledWith({ text: expect.stringContaining('WHERE user_id = $1'), values: [USER_ID] });
+        expect(subscriptionsCount).toBe(12);
+    });
 });
 
 

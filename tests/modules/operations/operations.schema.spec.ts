@@ -36,4 +36,10 @@ describe('Operations schemas tests', () => {
     it('Refuses a generated operation without subscription', () => {
         expect(() => OperationsGeneratedInsertSchema.parse({ ...operationSentByClient, subscription_id: undefined, user_id: 42 })).toThrow(ZodError);
     });
+
+
+    it('Refuses an amount or costs that the database cannot store', () => {
+        expect(() => OperationsInsertSchema.parse({ ...operationSentByClient, amount: 10000000000 })).toThrow(ZodError);
+        expect(() => OperationsInsertSchema.parse({ ...operationSentByClient, costs: 10000000000 })).toThrow(ZodError);
+    });
 });

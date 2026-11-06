@@ -62,7 +62,8 @@ const config: AppConfigInterface = {
     app_port: 80,
     host_name: process.env.HOST_NAME || 'localhost',
     base_url: process.env.BASE_URL || 'http://localhost:80',
-    app_env: process.env.APP_ENV?.toLowerCase() || 'dev',
+    /* Production when not set: a forgotten variable must not expose Swagger nor disable the Content-Security-Policy */
+    app_env: process.env.APP_ENV?.toLowerCase() || 'prod',
     log_format: process.env.LOG_FORMAT || 'combined',
 
     /* Database */
