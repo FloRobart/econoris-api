@@ -45,14 +45,6 @@ export const helmetOptions: HelmetOptions = {
     /* IE download options */
     ieNoOpen: true,
 
-    /* Permissions-Policy (formerly Feature-Policy) */
-    permissionsPolicy: {
-        geolocation: [],
-        microphone: [],
-        camera: [],
-        payment: [],
-    },
-
     /* Cross-Origin-Opener-Policy (enable in prod) */
     crossOriginOpenerPolicy: AppConfig.app_env.includes('prod') ? { policy: 'same-origin' } : false,
 
@@ -61,4 +53,4 @@ export const helmetOptions: HelmetOptions = {
 
     /* Hide powered by (Helmet removes X-Powered-By by default) */
     hidePoweredBy: true,
-} as HelmetOptions;
+};

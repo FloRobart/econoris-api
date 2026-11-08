@@ -9,9 +9,9 @@ import { ZodError } from "zod";
 
 
 /**
- * Middleware de validation de la clé 'Authorization' dans les headers.
- * @param schema Schéma Zod à utiliser pour la validation.
- * @throws AppError avec statut 400 si la validation échoue.
+ * Middleware that validates the 'Authorization' header, then adds the user it belongs to in req.body.user.
+ * The user always comes from the authentication server: a user sent in the body by the client is replaced.
+ * @throws AppError with status 401 if the header is invalid.
  */
 export const authorizationValidator = async (req: Request, _res: Response, next: NextFunction) => {
     try {
@@ -27,14 +27,16 @@ export const authorizationValidator = async (req: Request, _res: Response, next:
 };
 
 /**
- * Récupère l'utilisateur via l'API d'authentification.
- * @param token Le token d'authentification
- * @throws AppError si la réponse HTTP n'est pas 200
+ * Gets the user from the authentication server.
+ * @param token The authentication token
+ * @returns The user the token belongs to
+ * @throws AppError if the authentication server refuses the token, does not answer in time or answers invalid data
  */
 async function getUserFromAPI(token: string): Promise<UserSafe> {
     try {
         const response = await axios.get(AppConfig.auth_app_url + "/users", {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: AppConfig.auth_request_timeout,
         });
 
         if (response.status !== 200) {
@@ -44,7 +46,10 @@ async function getUserFromAPI(token: string): Promise<UserSafe> {
     } catch (error: any) {
         if (error instanceof AppError) throw error;
         if (error instanceof ZodError) { throw new AppError("Invalid user data format", 500); }
-        const status = error?.response?.status || 500;
-        throw new AppError("Error retrieving user information", status);
+
+        /* No answer at all: the authentication server is down or slower than the timeout */
+        if (!error?.response) { throw new AppError("Authentication service unavailable", 503); }
+
+        throw new AppError("Error retrieving user information", error.response.status);
     }
 }

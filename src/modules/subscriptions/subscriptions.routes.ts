@@ -3,6 +3,7 @@ import * as SubscriptionsController from "./subscriptions.controller";
 import { bodyValidator } from "../../core/middlewares/validators/body_validator.middleware";
 import { SubscriptionsIdDeleteSchema, SubscriptionsIdUpdateSchema, SubscriptionsInsertSchema, SubscriptionsUpdateSchema } from "./subscriptions.schema";
 import { paramsQueryValidator } from "../../core/middlewares/validators/params_query_validator.middleware";
+import { subscriptionCreationLimiter } from "../../core/middlewares/rate_limiter.middleware";
 
 
 
@@ -88,6 +89,18 @@ router.get('/', SubscriptionsController.selectSubscriptions);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/error401'
+ *       403:
+ *         description: Forbidden. The user already has the maximum number of subscriptions (200).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/error403'
+ *       429:
+ *         description: Too many requests. A user can create at most 30 subscriptions per hour.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/error429'
  *       500:
  *         description: Internal server error. Please create an issue on Github
  *         content:
@@ -95,7 +108,7 @@ router.get('/', SubscriptionsController.selectSubscriptions);
  *             schema:
  *               $ref: '#/components/schemas/error500'
  */
-router.post('/', bodyValidator(SubscriptionsInsertSchema), SubscriptionsController.insertSubscriptions);
+router.post('/', subscriptionCreationLimiter, bodyValidator(SubscriptionsInsertSchema), SubscriptionsController.insertSubscriptions);
 
 
 /*========*/

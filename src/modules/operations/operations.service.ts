@@ -1,12 +1,18 @@
-import { Operation, OperationInsert, OperationUpdate } from './operations.types';
+import { Operation, OperationGeneratedInsert, OperationInsert, OperationUpdate } from './operations.types';
 import * as OperationsRepository from './operations.repository';
-import { OperationsInsertSchema, OperationsSchema, OperationsUpdateSchema } from './operations.schema';
+import { OperationsGeneratedInsertSchema, OperationsSchema, OperationsUpdateSchema } from './operations.schema';
 import { ZodError } from 'zod';
 import { AppError } from '../../core/models/AppError.model';
-import { addDays, addWeeks, addMonths, isAfter, endOfMonth } from 'date-fns';
+import { addDays, addWeeks, addMonths, isAfter, isValid, endOfMonth, getDaysInMonth, setDate } from 'date-fns';
 import { updateSubscriptionsLastGeneratedAt } from '../subscriptions/subscriptions.service';
 import { Subscription } from '../subscriptions/subscriptions.types';
 import { SubscriptionsSchema } from '../subscriptions/subscriptions.schema';
+
+
+
+/* A subscription that started long ago gets its operations over several runs of the cron job,
+   so that a single request can never insert an unlimited number of operations */
+const MAX_OPERATIONS_GENERATED_AT_ONCE = 1000;
 
 
 
@@ -62,23 +68,23 @@ export async function insertOperations(operationData: OperationInsert): Promise<
 }
 
 /**
- * Insert multiple operations for a user in bulk.
+ * Insert multiple operations generated from subscriptions, in bulk.
  * @param operations The array of operation data to insert.
  * @throws AppError if there is an issue inserting the operations.
  */
-export async function insertBulkOperations(operationsData: OperationInsert[]): Promise<void> {
+export async function insertBulkOperations(operationsData: OperationGeneratedInsert[]): Promise<void> {
     if (operationsData.length === 0) return;
 
     try {
-        const operations: OperationInsert[] = OperationsInsertSchema.array().parse(operationsData);
+        const operations: OperationGeneratedInsert[] = OperationsGeneratedInsertSchema.array().parse(operationsData);
 
         const chunkSize = 500;
         if (operations.length > chunkSize) {
-            const chunks: OperationInsert[][] = [];
+            const chunks: OperationGeneratedInsert[][] = [];
             for (let i = 0; i < operations.length; i += chunkSize) {
                 chunks.push(operations.slice(i, i + chunkSize));
             }
-            await Promise.all(chunks.map((chunk: OperationInsert[]) => OperationsRepository.insertBulkOperations(chunk)));
+            await Promise.all(chunks.map((chunk: OperationGeneratedInsert[]) => OperationsRepository.insertBulkOperations(chunk)));
             return;
         }
 
@@ -89,7 +95,8 @@ export async function insertBulkOperations(operationsData: OperationInsert[]): P
 }
 
 /**
- * Generate missing operations for a subscription up to the current date.
+ * Generate missing operations for a subscription up to the end of the current month.
+ * At most MAX_OPERATIONS_GENERATED_AT_ONCE operations are generated: the next runs generate the rest.
  * @param subscription The subscription object.
  * @throws AppError if there is an issue generating the operations.
  */
@@ -102,61 +109,13 @@ export async function insertMissingOperations(subscription: Subscription): Promi
     }
 
     try {
-        const operationsToInsert: OperationInsert[] = [];
-
-        let currentDate: Date = parsedSubscription.last_generated_at ?? parsedSubscription.start_date;
         const now: Date = new Date();
+        const levyDates: Date[] = getMissingLevyDates(parsedSubscription, now);
+        if (levyDates.length === 0) return;
 
-        const endOfCurrentMonth: Date = endOfMonth(now);
-
-        // Ajout de l'opération pour le mois de début si aucune opération n'a encore été générée
-        if (!parsedSubscription.last_generated_at) {
-            let is_validate = currentDate <= now;
-            operationsToInsert.push({
-                levy_date: currentDate,
-                label: parsedSubscription.label,
-                amount: parsedSubscription.amount,
-                category: parsedSubscription.category,
-                source: parsedSubscription.source,
-                destination: parsedSubscription.destination,
-                costs: parsedSubscription.costs,
-                is_validate,
-                subscription_id: parsedSubscription.id,
-                user_id: parsedSubscription.user_id,
-            });
-        }
-
-        while (true) {
-            let nextDate = getNextDate(currentDate, parsedSubscription.interval_unit, parsedSubscription.interval_value);
-
-            if (parsedSubscription.interval_unit === 'months' && parsedSubscription.day_of_month) {
-                nextDate.setDate(parsedSubscription.day_of_month);
-            }
-
-            if (parsedSubscription.end_date && isAfter(nextDate, parsedSubscription.end_date)) break;
-            if (isAfter(nextDate, endOfCurrentMonth)) break;
-
-            let is_validate = nextDate <= now;
-            operationsToInsert.push({
-                levy_date: nextDate,
-                label: parsedSubscription.label,
-                amount: parsedSubscription.amount,
-                category: parsedSubscription.category,
-                source: parsedSubscription.source,
-                destination: parsedSubscription.destination,
-                costs: parsedSubscription.costs,
-                is_validate,
-                subscription_id: parsedSubscription.id,
-                user_id: parsedSubscription.user_id,
-            });
-
-            currentDate = nextDate;
-        }
-
-        if (operationsToInsert.length > 0) {
-            await insertBulkOperations(operationsToInsert);
-            await updateSubscriptionsLastGeneratedAt(parsedSubscription.id, currentDate);
-        }
+        const operationsToInsert = levyDates.map((levyDate) => buildSubscriptionOperation(parsedSubscription, levyDate, now));
+        await insertBulkOperations(operationsToInsert);
+        await updateSubscriptionsLastGeneratedAt(parsedSubscription.id, levyDates[levyDates.length - 1]);
     } catch (error) {
         throw (error instanceof AppError) ? error : new AppError("Failed to generate missing operations", 500);
     }
@@ -231,22 +190,90 @@ export async function deleteOperations(userId: number, operationId: number): Pro
 /* UTILITIES */
 /*===========*/
 /**
- * Get the next date based on the current date, interval unit, and value.
- * @param current Current date
- * @param unit Interval unit ('days', 'weeks', 'months')
- * @param value Interval value
- * @returns The next date
+ * List the levy dates of a subscription that have no operation yet, up to the end of the current month.
+ * The first levy happens on the start date, the next ones follow the interval of the subscription.
+ * @param subscription The subscription
+ * @param now The current date
+ * @returns The missing levy dates, in chronological order, at most MAX_OPERATIONS_GENERATED_AT_ONCE
  * @throws AppError if the interval unit is unsupported
  */
-function getNextDate(current: Date, unit: string, value: number): Date {
-    switch (unit) {
-        case 'days':
-            return addDays(current, value);
-        case 'weeks':
-            return addWeeks(current, value);
-        case 'months':
-            return addMonths(current, value);
-        default:
-            throw new AppError(`Unsupported interval unit : ${unit}`, 400);
+function getMissingLevyDates(subscription: Subscription, now: Date): Date[] {
+    const endOfCurrentMonth: Date = endOfMonth(now);
+    const levyDates: Date[] = [];
+
+    if (!subscription.last_generated_at) levyDates.push(subscription.start_date);
+    let currentDate: Date = subscription.last_generated_at ?? subscription.start_date;
+
+    while (levyDates.length < MAX_OPERATIONS_GENERATED_AT_ONCE) {
+        const nextDate = getNextDate(currentDate, subscription);
+
+        /* An invalid date is never after another one: without this check, the loop would never end */
+        if (!isValid(nextDate)) break;
+        if (subscription.end_date && isAfter(nextDate, subscription.end_date)) break;
+        if (isAfter(nextDate, endOfCurrentMonth)) break;
+
+        levyDates.push(nextDate);
+        currentDate = nextDate;
     }
+
+    return levyDates;
+}
+
+/**
+ * Build the operation of a subscription for one of its levy dates.
+ * A levy that already happened is validated, a future one is not yet.
+ * @param subscription The subscription
+ * @param levyDate The levy date of the operation
+ * @param now The current date
+ * @returns The operation to insert
+ */
+function buildSubscriptionOperation(subscription: Subscription, levyDate: Date, now: Date): OperationGeneratedInsert {
+    return {
+        levy_date: levyDate,
+        label: subscription.label,
+        amount: subscription.amount,
+        category: subscription.category,
+        source: subscription.source,
+        destination: subscription.destination,
+        costs: subscription.costs,
+        is_validate: levyDate <= now,
+        subscription_id: subscription.id,
+        user_id: subscription.user_id,
+    };
+}
+
+/**
+ * Get the levy date that follows the given one, according to the interval of the subscription.
+ * @param current Current levy date
+ * @param subscription The subscription
+ * @returns The next levy date
+ * @throws AppError if the interval unit is unsupported
+ */
+function getNextDate(current: Date, subscription: Subscription): Date {
+    switch (subscription.interval_unit) {
+        case 'days':
+            return addDays(current, subscription.interval_value);
+        case 'weeks':
+            return addWeeks(current, subscription.interval_value);
+        case 'months':
+            return getNextMonthlyDate(current, subscription.interval_value, subscription.day_of_month);
+        default:
+            throw new AppError(`Unsupported interval unit : ${subscription.interval_unit}`, 400);
+    }
+}
+
+/**
+ * Get the next levy date of a monthly subscription, on its day of the month.
+ * A shorter month uses its last day, without shifting the following levies:
+ * a subscription of the 31st falls on February 28th, then on March 31st.
+ * @param current Current levy date
+ * @param monthsToAdd Number of months between two levies
+ * @param dayOfMonth Day of the month of the levies, or null to keep the day of the current levy
+ * @returns The next levy date
+ */
+function getNextMonthlyDate(current: Date, monthsToAdd: number, dayOfMonth: number | null): Date {
+    const nextDate = addMonths(current, monthsToAdd);
+    if (!dayOfMonth) return nextDate;
+
+    return setDate(nextDate, Math.min(dayOfMonth, getDaysInMonth(nextDate)));
 }

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OperationsSchema, OperationsInsertSchema, OperationsUpdateSchema, OperationsIdUpdateSchema, OperationsIdDeleteSchema } from "./operations.schema";
+import { OperationsSchema, OperationsInsertSchema, OperationsGeneratedInsertSchema, OperationsUpdateSchema, OperationsIdUpdateSchema, OperationsIdDeleteSchema } from "./operations.schema";
 
 
 /* SELECT */
@@ -7,6 +7,7 @@ export type Operation = z.infer<typeof OperationsSchema>;
 
 /* INSERT */
 export type OperationInsert = z.infer<typeof OperationsInsertSchema>;
+export type OperationGeneratedInsert = z.infer<typeof OperationsGeneratedInsertSchema>;
 
 /* UPDATE */
 export type OperationsIdUpdate = z.infer<typeof OperationsIdUpdateSchema>;
