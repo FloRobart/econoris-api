@@ -1,6 +1,6 @@
 {
   "name": "econoris-api",
-  "version": "2.2.3",
+  "version": "3.0.0",
   "description": "Éconoris est une application web de gestion de finances personnelles.",
   "main": "src/server.ts",
   "scripts": {
