@@ -78,6 +78,25 @@ export async function selectAllSubscriptionsEnded(): Promise<Subscription[]> {
     }
 }
 
+/**
+ * Count the subscriptions of a user.
+ * @param userId The ID of the user.
+ * @returns The number of subscriptions of the user.
+ * @throws AppError if there is an issue counting the subscriptions.
+ */
+export async function countSubscriptions(userId: number): Promise<number> {
+    try {
+        const query = "SELECT COUNT(*) AS subscriptions_count FROM subscriptions WHERE user_id = $1;";
+
+        const rows = await Database.execute<{ subscriptions_count: string }>({ text: query, values: [userId] });
+
+        /* PostgreSQL counts with a bigint, which the driver returns as a string */
+        return Number(rows[0].subscriptions_count);
+    } catch (error) {
+        throw (error instanceof AppError) ? error : new AppError("Failed to count subscriptions", 500);
+    }
+}
+
 
 /*========*/
 /* INSERT */
@@ -171,12 +190,12 @@ export async function updateSubscriptionsLastGeneratedAt(subscriptionId: number,
 }
 
 /**
- * Update the last_generated_at field of a subscription.
- * @param subscriptionId ID of the subscription to update.
- * @param lastGeneratedAt The new last_generated_at value.
+ * Update the active status of several subscriptions.
+ * @param subscriptions Array of subscriptions to update.
+ * @param active The new active status.
  * @throws AppError if there is an issue updating the field.
  */
-export async function updateBulkSubscriptionsActive(subscriptions: SubscriptionUpdate[], active: boolean): Promise<void> {
+export async function updateBulkSubscriptionsActive(subscriptions: Subscription[], active: boolean): Promise<void> {
     try {
         const query = "UPDATE subscriptions SET active = $1 WHERE ";
         const values: any[] = [active];

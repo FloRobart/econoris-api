@@ -33,7 +33,7 @@ export type Query = {
  * @method static execute - Executes a query on the database.
  */
 export abstract class ADatabase implements IDatabase {
-    protected static client: pg.Client | null = null;
+    protected static pool: pg.Pool | null = null;
 
     abstract connect(): Promise<void>;
     abstract close(): Promise<void>;
@@ -47,8 +47,8 @@ export abstract class ADatabase implements IDatabase {
      */
     static async execute<T = any>(query: Query): Promise<T[]> {
         try {
-            if (!this.client) throw new AppError('Database not connected');
-            const res = await this.client.query(query.text, query.values);
+            if (!this.pool) throw new AppError('Database not connected');
+            const res = await this.pool.query(query.text, query.values);
             if (res.rows === null) { throw new AppError('Database query failed'); }
 
             return res.rows || [];
@@ -65,6 +65,8 @@ export abstract class ADatabase implements IDatabase {
 /*================*/
 /**
  * Database class to manage PostgreSQL connections and queries.
+ * A pool of connections is used: a connection broken by a restart of the database is replaced
+ * by a new one at the next query, so the server never has to be restarted for it.
  * @extends ADatabase
  * @method connect - Connects to the database.
  * @method close - Closes the database connection.
@@ -74,37 +76,40 @@ export abstract class ADatabase implements IDatabase {
  * const rows = await Database.execute({ text: 'SELECT * FROM mytable', values: [] });
  */
 export class Database extends ADatabase {
-    constructor(private dburi: string | object) { super(); }
+    constructor(private dburi: string) { super(); }
 
     /**
-     * Connects the server to the database
+     * Creates the pool of connections, then checks that the database answers
      * @async
-     * @param dburi The database URI
      * @example dburi = "postgresql://<user>:<password>@<host>:<port>/<db_name>"
-     * @returns true if connected successfully, otherwise false
+     * @throws AppError if the database cannot be reached
      */
     async connect(): Promise<void> {
         try {
-            if (Database.client) return;
-            Database.client = new pg.Client(this.dburi);
-            await Database.client.connect();
-            Database.client.on('error', (error: Error) => logger.error('DATABASE ERROR :', error));
-            Database.client.on('end', () => logger.info('DATABASE CONNECTION CLOSED'));
+            if (Database.pool) return;
+            const pool = new pg.Pool({ connectionString: this.dburi });
+
+            /* Without this listener, an idle connection broken by the database would stop the whole server */
+            pool.on('error', (error: Error) => logger.error('DATABASE ERROR :', error));
+
+            /* The pool only connects at the first query: this one keeps the server from starting without its database */
+            await pool.query('SELECT 1');
+            Database.pool = pool;
         } catch (error) {
             throw new AppError('Database connection failed');
         }
     }
 
     /**
-     * Closes the database connection
+     * Closes every connection of the pool
      * @async
-     * @returns boolean true if the connection was closed successfully, otherwise false
+     * @throws AppError if the connections cannot be closed
      */
     async close(): Promise<void> {
         try {
-            if (!Database.client) return;
-            await Database.client.end();
-            Database.client = null;
+            if (!Database.pool) return;
+            await Database.pool.end();
+            Database.pool = null;
         } catch (error) {
             throw new AppError('Database disconnection failed');
         }
