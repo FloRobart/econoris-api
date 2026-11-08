@@ -9,7 +9,7 @@ import { insertMissingOperations } from '../operations/operations.service';
 
 /* Each subscription generates up to 1000 operations per night (see insertMissingOperations):
    without this limit, a single account could fill the database */
-const MAX_SUBSCRIPTIONS_PER_USER = 400;
+const MAX_SUBSCRIPTIONS_PER_USER = 200;
 
 
 
