@@ -4,6 +4,7 @@ import { SubscriptionsSchema } from './subscriptions.schema';
 import { ZodError } from 'zod';
 import { AppError } from '../../core/models/AppError.model';
 import { insertMissingOperations } from '../operations/operations.service';
+import { resolveCategory } from '../categories/categories.service';
 
 
 
@@ -65,15 +66,17 @@ export async function selectAllSubscriptionsEnded(): Promise<Subscription[]> {
 /*========*/
 /**
  * Insert a new subscription for a user.
- * @param subscriptionData The subscription data to insert.
+ * @param subscriptionData The subscription data to insert, with the category chosen by the client.
  * @returns The newly created Subscription object.
- * @throws AppError if the user already has too many subscriptions or if there is an issue inserting the subscription.
+ * @throws AppError if the user already has too many subscriptions, if the category is missing or unknown,
+ *         or if there is an issue inserting the subscription.
  */
 export async function insertSubscriptions(subscriptionData: SubscriptionInsert): Promise<Subscription> {
     try {
         await checkSubscriptionsLimit(subscriptionData.user_id);
 
-        const subscriptions = await SubscriptionsRepository.insertSubscriptions(subscriptionData);
+        const resolvedCategory = await resolveCategory(subscriptionData);
+        const subscriptions = await SubscriptionsRepository.insertSubscriptions({ ...subscriptionData, ...resolvedCategory });
         const parsedSubscriptions = SubscriptionsSchema.parse(subscriptions);
         await insertMissingOperations(parsedSubscriptions);
 
@@ -89,12 +92,15 @@ export async function insertSubscriptions(subscriptionData: SubscriptionInsert):
 /*========*/
 /**
  * Update an existing subscription for a user.
- * @param subscriptionData The subscription data to update.
+ * Its operations already generated keep their category: only the next ones get the new one.
+ * @param subscriptionData The subscription data to update, with the category chosen by the client.
  * @returns The updated Subscription object.
+ * @throws AppError if the category is missing or unknown, or if there is an issue updating the subscription.
  */
 export async function updateSubscriptions(subscriptionData: SubscriptionUpdate): Promise<Subscription> {
     try {
-        const subscriptions = await SubscriptionsRepository.updateSubscriptions(subscriptionData);
+        const resolvedCategory = await resolveCategory(subscriptionData);
+        const subscriptions = await SubscriptionsRepository.updateSubscriptions({ ...subscriptionData, ...resolvedCategory });
         return SubscriptionsSchema.parse(subscriptions);
     } catch (error) {
         throw (error instanceof ZodError) ? new AppError("Failed to parse subscription (subscription updated successfully)", 500) : error;

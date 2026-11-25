@@ -1,6 +1,7 @@
 import { AppError } from "../../core/models/AppError.model";
 import { Database } from "../../core/models/Database.model";
 import { Operation, OperationGeneratedInsert, OperationInsert, OperationUpdate } from "./operations.types";
+import { ResolvedCategory } from "../categories/categories.types";
 
 
 
@@ -65,7 +66,7 @@ export async function selectAllOperationsInvalidate(): Promise<Operation[]> {
  * @returns The newly created Operation object.
  * @throws AppError if there is an issue inserting the operation.
  */
-export async function insertOperations(operationData: OperationInsert): Promise<Operation> {
+export async function insertOperations(operationData: OperationInsert & ResolvedCategory): Promise<Operation> {
     try {
         const keys = Object.keys(operationData);
         const columns = keys.join(", ");
@@ -126,7 +127,7 @@ export async function insertBulkOperations(operations: OperationGeneratedInsert[
  * @param operationData The operation data to update.
  * @returns The updated Operation object.
  */
-export async function updateOperations(operationData: OperationUpdate): Promise<Operation> {
+export async function updateOperations(operationData: OperationUpdate & ResolvedCategory): Promise<Operation> {
     try {
         /* Extract id and user_id, prepare fields to update */
         const { id, user_id, ...fieldsToUpdate } = operationData;

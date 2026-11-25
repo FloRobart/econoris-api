@@ -11,6 +11,7 @@
  *         - id
  *         - label
  *         - amount
+ *         - category_id
  *         - category
  *         - source
  *         - destination
@@ -35,9 +36,15 @@
  *         amount:
  *           type: number
  *           exemple: 100.00
+ *         category_id:
+ *           type: number
+ *           description: ID of the category, from GET /categories
+ *           example: 49
  *         category:
  *           type: string
- *           exemple: "Income"
+ *           deprecated: true
+ *           description: Kept for the clients not yet updated. The label sent by such a client, otherwise the label of the category.
+ *           example: "Courses"
  *         source:
  *           type: string
  *           exemple: "Job"
@@ -90,10 +97,10 @@
  *   schemas:
  *     SubscriptionsInsert:
  *       type: object
+ *       description: The category is given by category_id, or by the deprecated category for the clients not yet updated.
  *       required:
  *         - label
  *         - amount
- *         - category
  *         - interval_value
  *         - interval_unit
  *         - start_date
@@ -107,9 +114,15 @@
  *         amount:
  *           type: number
  *           exemple: 100.00
+ *         category_id:
+ *           type: number
+ *           description: ID of the category, from GET /categories
+ *           example: 49
  *         category:
  *           type: string
- *           exemple: "Income"
+ *           deprecated: true
+ *           description: Label of an old category, sent by the clients not yet updated instead of category_id. The server finds its equivalent category, or "Autres".
+ *           example: "Courses"
  *         source:
  *           type: string
  *           exemple: "Job"
@@ -147,10 +160,10 @@
  *   schemas:
  *     SubscriptionsUpdate:
  *       type: object
+ *       description: The category is given by category_id, or by the deprecated category for the clients not yet updated.
  *       required:
  *         - label
  *         - amount
- *         - category
  *         - interval_value
  *         - interval_unit
  *         - start_date
@@ -164,9 +177,15 @@
  *         amount:
  *           type: number
  *           exemple: 100.00
+ *         category_id:
+ *           type: number
+ *           description: ID of the category, from GET /categories
+ *           example: 49
  *         category:
  *           type: string
- *           exemple: "Income"
+ *           deprecated: true
+ *           description: Label of an old category, sent by the clients not yet updated instead of category_id. The server finds its equivalent category, or "Autres".
+ *           example: "Courses"
  *         source:
  *           type: string
  *           exemple: "Job"

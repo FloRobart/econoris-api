@@ -1,6 +1,7 @@
 import { AppError } from "../../core/models/AppError.model";
 import { Database } from "../../core/models/Database.model";
 import { Subscription, SubscriptionInsert, SubscriptionUpdate } from "./subscriptions.types";
+import { ResolvedCategory } from "../categories/categories.types";
 
 
 
@@ -107,7 +108,7 @@ export async function countSubscriptions(userId: number): Promise<number> {
  * @returns The newly created Subscription object.
  * @throws AppError if there is an issue inserting the subscription.
  */
-export async function insertSubscriptions(subscriptionData: SubscriptionInsert): Promise<Subscription> {
+export async function insertSubscriptions(subscriptionData: SubscriptionInsert & ResolvedCategory): Promise<Subscription> {
     try {
         const keys = Object.keys(subscriptionData);
         const columns = keys.join(", ");
@@ -139,7 +140,7 @@ export async function insertSubscriptions(subscriptionData: SubscriptionInsert):
  * @param subscriptionData The subscription data to update.
  * @returns The updated Subscription object.
  */
-export async function updateSubscriptions(subscriptionData: SubscriptionUpdate): Promise<Subscription> {
+export async function updateSubscriptions(subscriptionData: SubscriptionUpdate & ResolvedCategory): Promise<Subscription> {
     try {
         /* Extract id and user_id, prepare fields to update */
         const { id, user_id, ...fieldsToUpdate } = subscriptionData;

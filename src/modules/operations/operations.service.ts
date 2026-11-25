@@ -7,6 +7,7 @@ import { addDays, addWeeks, addMonths, isAfter, isValid, endOfMonth, getDaysInMo
 import { updateSubscriptionsLastGeneratedAt } from '../subscriptions/subscriptions.service';
 import { Subscription } from '../subscriptions/subscriptions.types';
 import { SubscriptionsSchema } from '../subscriptions/subscriptions.schema';
+import { resolveCategory } from '../categories/categories.service';
 
 
 
@@ -54,13 +55,14 @@ export async function selectAllOperationsInvalidate(): Promise<Operation[]> {
 /*========*/
 /**
  * Insert a new operation for a user.
- * @param operationData The operation data to insert.
+ * @param operationData The operation data to insert, with the category chosen by the client.
  * @returns The newly created Operation object.
- * @throws AppError if there is an issue inserting the operation.
+ * @throws AppError if the category is missing or unknown, or if there is an issue inserting the operation.
  */
 export async function insertOperations(operationData: OperationInsert): Promise<Operation> {
     try {
-        const operations = await OperationsRepository.insertOperations(operationData);
+        const resolvedCategory = await resolveCategory(operationData);
+        const operations = await OperationsRepository.insertOperations({ ...operationData, ...resolvedCategory });
         return OperationsSchema.parse(operations);
     } catch (error) {
         throw (error instanceof ZodError) ? new AppError("Failed to parse operation (operation inserted successfully)", 500) : error;
@@ -127,12 +129,14 @@ export async function insertMissingOperations(subscription: Subscription): Promi
 /*========*/
 /**
  * Update an existing operation for a user.
- * @param operationData The operation data to update.
+ * @param operationData The operation data to update, with the category chosen by the client.
  * @returns The updated Operation object.
+ * @throws AppError if the category is missing or unknown, or if there is an issue updating the operation.
  */
 export async function updateOperations(operationData: OperationUpdate): Promise<Operation> {
     try {
-        const operations = await OperationsRepository.updateOperations(operationData);
+        const resolvedCategory = await resolveCategory(operationData);
+        const operations = await OperationsRepository.updateOperations({ ...operationData, ...resolvedCategory });
         return OperationsSchema.parse(operations);
     } catch (error) {
         throw (error instanceof ZodError) ? new AppError("Failed to parse operation (operation updated successfully)", 500) : error;
@@ -232,6 +236,7 @@ function buildSubscriptionOperation(subscription: Subscription, levyDate: Date, 
         levy_date: levyDate,
         label: subscription.label,
         amount: subscription.amount,
+        category_id: subscription.category_id,
         category: subscription.category,
         source: subscription.source,
         destination: subscription.destination,
