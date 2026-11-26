@@ -1,6 +1,7 @@
 import { z, ZodDate, ZodNumber } from "zod";
 import { AmountSchema } from "../../core/schemas/amount.schema";
 import { OperationsGeneratedInsertSchema } from "../operations/operations.schema";
+import { CategoryChoiceSchema, ResolvedCategorySchema } from "../categories/categories.schema";
 
 
 
@@ -39,6 +40,9 @@ export const SubscriptionsSchema = z.object({
     id: z.int().min(1),
     label: z.string().min(1).max(255),
     amount: AmountSchema,
+    category_id: ResolvedCategorySchema.shape.category_id,
+
+    /* Deprecated: kept for the clients not yet updated, which read and send a category label */
     category: z.string().min(1).max(255),
     source: z.string().max(255).nullable().default(null),
     destination: z.string().max(255).nullable().default(null),
@@ -70,9 +74,12 @@ const SubscriptionsInsertObjectSchema = SubscriptionsSchema.extend({
     /* Copied into the operations generated from the subscription: they follow the rules of these
        operations, otherwise a blank label would make their generation fail every night */
     label: OperationsGeneratedInsertSchema.shape.label,
-    category: OperationsGeneratedInsertSchema.shape.category,
     source: OperationsGeneratedInsertSchema.shape.source,
     destination: OperationsGeneratedInsertSchema.shape.destination,
+
+    /* The server finds the category from the choice of the client (see resolveCategory) */
+    category_id: CategoryChoiceSchema.shape.category_id,
+    category: CategoryChoiceSchema.shape.category,
 
     interval_value: z.int().min(1).max(MAX_INTERVAL_VALUE).default(1),
     start_date: SubscriptionDateSchema,

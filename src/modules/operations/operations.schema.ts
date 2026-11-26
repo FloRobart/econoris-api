@@ -1,5 +1,6 @@
 import { z, ZodDate, ZodNumber } from "zod";
 import { AmountSchema } from "../../core/schemas/amount.schema";
+import { CategoryChoiceSchema, ResolvedCategorySchema } from "../categories/categories.schema";
 
 
 
@@ -11,7 +12,10 @@ export const OperationsSchema = z.object({
     levy_date: z.date().default(new Date()),
     label: z.string().trim().min(1).max(255),
     amount: AmountSchema,
-    category: z.string().trim().min(1).max(255),
+    category_id: ResolvedCategorySchema.shape.category_id,
+
+    /* Deprecated: kept for the clients not yet updated, which read and send a category label */
+    category: ResolvedCategorySchema.shape.category,
 
     source: z.string().trim().max(255).nullable().default(null),
     destination: z.string().trim().max(255).nullable().default(null),
@@ -36,6 +40,10 @@ export const OperationsInsertSchema = OperationsSchema.extend({
         (val) => typeof val === "string" ? new Date(val) : val,
         z.date(),
     ),
+
+    /* The server finds the category from the choice of the client (see resolveCategory) */
+    category_id: CategoryChoiceSchema.shape.category_id,
+    category: CategoryChoiceSchema.shape.category,
 }).omit({
     id: true,
 
@@ -50,6 +58,10 @@ export const OperationsInsertSchema = OperationsSchema.extend({
 export const OperationsGeneratedInsertSchema = OperationsInsertSchema.extend({
     user_id: OperationsSchema.shape.user_id,
     subscription_id: z.int().min(1),
+
+    /* Copied from the subscription, whose category is already resolved */
+    category_id: OperationsSchema.shape.category_id,
+    category: OperationsSchema.shape.category,
 });
 
 

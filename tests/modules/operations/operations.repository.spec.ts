@@ -2,6 +2,7 @@ import { Database } from '../../../src/core/models/Database.model';
 import { AppError } from '../../../src/core/models/AppError.model';
 import * as OperationsRepository from '../../../src/modules/operations/operations.repository';
 import { OperationUpdate } from '../../../src/modules/operations/operations.types';
+import { ResolvedCategory } from '../../../src/modules/categories/categories.types';
 
 
 
@@ -63,13 +64,14 @@ describe('Operations repository tests', () => {
  * @param userId The user who updates the operation
  * @returns The update
  */
-function buildOperationUpdate(userId: number | undefined): OperationUpdate {
+function buildOperationUpdate(userId: number | undefined): OperationUpdate & ResolvedCategory {
     return {
         id: OPERATION_ID,
         user_id: userId,
         levy_date: new Date('2026-11-05'),
         label: 'Courses',
         amount: -42.5,
+        category_id: 49,
         category: 'Courses',
         source: null,
         destination: null,
