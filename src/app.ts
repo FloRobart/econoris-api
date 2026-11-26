@@ -14,6 +14,7 @@ import operationsRoutes from './modules/operations/operations.routes';
 import { authorizationValidator } from './core/middlewares/validators/auth_validator.middleware';
 import loansRoutes from './modules/loans/loans.routes';
 import subscriptionsRoutes from './modules/subscriptions/subscriptions.routes';
+import categoriesRoutes from './modules/categories/categories.routes';
 import morgan from 'morgan';
 
 
@@ -112,6 +113,9 @@ app.use('/subscriptions', subscriptionsRoutes);
 
 /* loans routes */
 app.use('/loans', loansRoutes);
+
+/* categories routes */
+app.use('/categories', categoriesRoutes);
 
 
 /* Default Route Handler (404) */

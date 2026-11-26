@@ -35,6 +35,14 @@ describe('Subscriptions schemas tests', () => {
         it('Applies the same rules to an update', () => {
             expect(() => SubscriptionsUpdateSchema.parse({ ...subscriptionSentByClient, id: 1, label: '   ' })).toThrow(ZodError);
         });
+
+
+        it('Accepts a subscription that gives its category by category_id only', () => {
+            const subscription = SubscriptionsInsertSchema.parse({ ...subscriptionSentByClient, category: undefined, category_id: 94 });
+
+            expect(subscription.category_id).toBe(94);
+            expect(subscription.category).toBeUndefined();
+        });
     });
 
 

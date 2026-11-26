@@ -2,6 +2,7 @@ import { Database } from '../../../src/core/models/Database.model';
 import { AppError } from '../../../src/core/models/AppError.model';
 import * as SubscriptionsRepository from '../../../src/modules/subscriptions/subscriptions.repository';
 import { SubscriptionUpdate } from '../../../src/modules/subscriptions/subscriptions.types';
+import { ResolvedCategory } from '../../../src/modules/categories/categories.types';
 
 
 
@@ -73,12 +74,13 @@ describe('Subscriptions repository tests', () => {
  * @param userId The user who updates the subscription
  * @returns The update
  */
-function buildSubscriptionUpdate(userId: number | undefined): SubscriptionUpdate {
+function buildSubscriptionUpdate(userId: number | undefined): SubscriptionUpdate & ResolvedCategory {
     return {
         id: SUBSCRIPTION_ID,
         user_id: userId,
         label: 'Netflix',
         amount: -13.49,
+        category_id: 94,
         category: 'Multimédia',
         source: null,
         destination: null,

@@ -1,24 +1,70 @@
 import { format } from 'date-fns';
+import { AppError } from '../../../src/core/models/AppError.model';
 import * as OperationsRepository from '../../../src/modules/operations/operations.repository';
-import { insertMissingOperations } from '../../../src/modules/operations/operations.service';
-import { OperationGeneratedInsert } from '../../../src/modules/operations/operations.types';
+import { insertMissingOperations, insertOperations } from '../../../src/modules/operations/operations.service';
+import { Operation, OperationGeneratedInsert, OperationInsert } from '../../../src/modules/operations/operations.types';
 import { updateSubscriptionsLastGeneratedAt } from '../../../src/modules/subscriptions/subscriptions.service';
 import { Subscription } from '../../../src/modules/subscriptions/subscriptions.types';
+import { resolveCategory } from '../../../src/modules/categories/categories.service';
 
 
 
-/* Only the generation of the operations is tested: the database is replaced by mocks */
+/* The database and the other services are replaced by mocks */
 jest.mock('../../../src/modules/operations/operations.repository', () => ({
     insertBulkOperations: jest.fn(),
+    insertOperations: jest.fn(),
 }));
 jest.mock('../../../src/modules/subscriptions/subscriptions.service', () => ({
     updateSubscriptionsLastGeneratedAt: jest.fn(),
 }));
+jest.mock('../../../src/modules/categories/categories.service', () => ({
+    resolveCategory: jest.fn(),
+}));
 
 const insertBulkOperationsMock = OperationsRepository.insertBulkOperations as jest.Mock;
+const insertOperationsMock = OperationsRepository.insertOperations as jest.Mock;
 const updateLastGeneratedAtMock = updateSubscriptionsLastGeneratedAt as jest.Mock;
+const resolveCategoryMock = resolveCategory as jest.Mock;
 
 const CURRENT_DATE = new Date('2026-11-05T12:00:00.000Z');
+
+
+
+/**
+ * insertOperations tests: the operation gets the category found from the choice of the client.
+ */
+describe('insertOperations tests', () => {
+    const operationSentByClient: OperationInsert = {
+        user_id: 42,
+        levy_date: new Date('2026-11-05'),
+        label: 'Leclerc',
+        amount: -80,
+        category: 'Courses',
+        source: null,
+        destination: null,
+        costs: 0,
+        is_validate: true,
+    };
+
+
+    it('Stores the category found from the old label sent by the client', async () => {
+        resolveCategoryMock.mockResolvedValue({ category_id: 49, category: 'Courses' });
+        insertOperationsMock.mockResolvedValue(buildSavedOperation(operationSentByClient));
+
+        await insertOperations(operationSentByClient);
+
+        expect(resolveCategoryMock).toHaveBeenCalledWith(operationSentByClient);
+        expect(insertOperationsMock).toHaveBeenCalledWith(expect.objectContaining({ category_id: 49, category: 'Courses' }));
+    });
+
+
+    it('Stores nothing when the category is refused', async () => {
+        resolveCategoryMock.mockRejectedValue(new AppError("Unknown category", 400));
+
+        await expect(insertOperations(operationSentByClient)).rejects.toHaveProperty('httpStatus', 400);
+        expect(insertOperationsMock).not.toHaveBeenCalled();
+    });
+});
 
 
 
@@ -58,12 +104,12 @@ describe('insertMissingOperations tests', () => {
     });
 
 
-    it('Validates the past operations only, and links them to the subscription and its user', async () => {
+    it('Validates the past operations only, and links them to the subscription, its user and its category', async () => {
         await insertMissingOperations(buildSubscription({ start_date: new Date('2026-10-10'), day_of_month: 10 }));
 
         const operations = getInsertedOperations();
         expect(operations.map((operation) => operation.is_validate)).toEqual([true, false]);
-        expect(operations[0]).toMatchObject({ subscription_id: 1, user_id: 42 });
+        expect(operations[0]).toMatchObject({ subscription_id: 1, user_id: 42, category_id: 94, category: 'Multimédia' });
     });
 
 
@@ -107,6 +153,7 @@ function buildSubscription(overrides: Partial<Subscription>): Subscription {
         id: 1,
         label: 'Netflix',
         amount: -13.49,
+        category_id: 94,
         category: 'Multimédia',
         source: null,
         destination: null,
@@ -126,6 +173,24 @@ function buildSubscription(overrides: Partial<Subscription>): Subscription {
         updated_at: new Date('2026-01-01'),
 
         ...overrides,
+    };
+}
+
+/**
+ * Builds the operation as the database returns it once inserted.
+ * @param operation The operation sent to the database
+ * @returns The saved operation
+ */
+function buildSavedOperation(operation: OperationInsert): Operation {
+    return {
+        ...operation,
+        id: 1,
+        user_id: 42,
+        category_id: 49,
+        category: 'Courses',
+        subscription_id: null,
+        created_at: new Date('2026-11-05'),
+        updated_at: new Date('2026-11-05'),
     };
 }
 
