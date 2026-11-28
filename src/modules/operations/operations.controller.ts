@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import * as OperationsService from './operations.service';
-import { OperationInsert, OperationUpdate } from './operations.types';
+import { OperationInsert, OperationsPeriod, OperationUpdate } from './operations.types';
 
 
 
@@ -8,17 +8,36 @@ import { OperationInsert, OperationUpdate } from './operations.types';
 /* SELECT */
 /*========*/
 /**
- * Get all operations for a user.
+ * Get the operations of a user, all of them or only those of a period.
  * @param req.body.user The user object containing the user ID.
+ * @param req.body.validatedData.params The validated period, whose bounds are both optional.
  * @param res The response object.
  * @param next The next middleware function.
  */
 export const selectOperations = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId: number = req.body.user.id;
+        const period: OperationsPeriod = req.body.validatedData.params;
 
-        const operations = await OperationsService.selectOperations(userId);
+        const operations = await OperationsService.selectOperations(userId, period);
         res.status(operations.length ? 200 : 204).json(operations);
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get the levy date of the oldest operation of a user.
+ * @param req.body.user The user object containing the user ID.
+ * @param res The response object.
+ * @param next The next middleware function.
+ */
+export const selectOldestOperationDate = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId: number = req.body.user.id;
+
+        const oldestOperationDate = await OperationsService.selectOldestOperationDate(userId);
+        res.status(oldestOperationDate ? 200 : 204).json(oldestOperationDate);
     } catch (error) {
         next(error);
     }

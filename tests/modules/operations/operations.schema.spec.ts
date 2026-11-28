@@ -1,5 +1,5 @@
 import { ZodError } from 'zod';
-import { OperationsGeneratedInsertSchema, OperationsInsertSchema, OperationsUpdateSchema } from '../../../src/modules/operations/operations.schema';
+import { OperationsGeneratedInsertSchema, OperationsInsertSchema, OperationsPeriodSchema, OperationsUpdateSchema } from '../../../src/modules/operations/operations.schema';
 
 
 
@@ -59,5 +59,39 @@ describe('Operations schemas tests', () => {
     it('Refuses an amount or costs that the database cannot store', () => {
         expect(() => OperationsInsertSchema.parse({ ...operationSentByClient, amount: 10000000000 })).toThrow(ZodError);
         expect(() => OperationsInsertSchema.parse({ ...operationSentByClient, costs: 10000000000 })).toThrow(ZodError);
+    });
+});
+
+
+
+/**
+ * Operations period schema tests: the period asked by a client when it loads its operations.
+ */
+describe('Operations period schema tests', () => {
+    it('Accepts a period without bound, so that the clients not yet updated still get every operation', () => {
+        expect(OperationsPeriodSchema.parse({})).toEqual({});
+    });
+
+
+    it('Accepts a period with only one of its bounds', () => {
+        expect(OperationsPeriodSchema.parse({ start_date: '2026-09-01' })).toEqual({ start_date: '2026-09-01' });
+        expect(OperationsPeriodSchema.parse({ end_date: '2026-08-31' })).toEqual({ end_date: '2026-08-31' });
+    });
+
+
+    it('Accepts a period of a single day', () => {
+        expect(OperationsPeriodSchema.parse({ start_date: '2026-09-01', end_date: '2026-09-01' })).toEqual({ start_date: '2026-09-01', end_date: '2026-09-01' });
+    });
+
+
+    it('Refuses a bound that is not a day "YYYY-MM-DD"', () => {
+        expect(() => OperationsPeriodSchema.parse({ start_date: '01/09/2026' })).toThrow(ZodError);
+        expect(() => OperationsPeriodSchema.parse({ start_date: '2026-09-01T00:00:00.000Z' })).toThrow(ZodError);
+        expect(() => OperationsPeriodSchema.parse({ end_date: '2026-02-30' })).toThrow(ZodError);
+    });
+
+
+    it('Refuses a period that ends before it starts', () => {
+        expect(() => OperationsPeriodSchema.parse({ start_date: '2026-11-30', end_date: '2026-09-01' })).toThrow(ZodError);
     });
 });
