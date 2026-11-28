@@ -29,6 +29,21 @@ export const OperationsSchema = z.object({
     updated_at: z.date().readonly(),
 });
 
+/* The bounds are days ("YYYY-MM-DD") rather than dates with a time: the database compares them to levy_date
+   as they are, so the result never depends on the time zone of the server */
+export const OperationsPeriodSchema = z.object({
+    start_date: z.iso.date().optional(),
+    end_date: z.iso.date().optional(),
+}).refine(
+    /* Days written "YYYY-MM-DD" are in chronological order when compared as strings */
+    (period) => !period.start_date || !period.end_date || period.start_date <= period.end_date,
+    { message: "start_date must not be after end_date" },
+);
+
+export const OperationsOldestDateSchema = z.object({
+    oldest_levy_date: z.iso.date(),
+});
+
 
 
 /*========*/

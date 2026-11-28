@@ -6,6 +6,8 @@ import * as OperationsService from '../../../src/modules/operations/operations.s
 
 /* Only the controller is tested: the service is replaced by a mock */
 jest.mock('../../../src/modules/operations/operations.service', () => ({
+    selectOperations: jest.fn(),
+    selectOldestOperationDate: jest.fn(),
     insertOperations: jest.fn(),
     updateOperations: jest.fn(),
 }));
@@ -22,6 +24,27 @@ const OTHER_USER_ID = 999;
  * Operations controller tests: the user of an operation always comes from the token.
  */
 describe('Operations controller tests', () => {
+    it('Selects the operations of the period asked, for the authenticated user', async () => {
+        (OperationsService.selectOperations as jest.Mock).mockResolvedValue([]);
+        const period = { start_date: '2026-09-01', end_date: '2026-11-30' };
+
+        await OperationsController.selectOperations(buildRequest({ params: period }), buildResponse(), jest.fn());
+
+        expect(OperationsService.selectOperations).toHaveBeenCalledWith(AUTHENTICATED_USER.id, period);
+    });
+
+
+    it('Answers without content to a user who has no operation, so no oldest one', async () => {
+        (OperationsService.selectOldestOperationDate as jest.Mock).mockResolvedValue(null);
+        const response = buildResponse();
+
+        await OperationsController.selectOldestOperationDate(buildRequest({}), response, jest.fn());
+
+        expect(OperationsService.selectOldestOperationDate).toHaveBeenCalledWith(AUTHENTICATED_USER.id);
+        expect(response.status).toHaveBeenCalledWith(204);
+    });
+
+
     it('Creates the operation for the authenticated user, whatever user_id the client sends', async () => {
         const request = buildRequest({ body: { label: 'Courses', user_id: OTHER_USER_ID } });
 

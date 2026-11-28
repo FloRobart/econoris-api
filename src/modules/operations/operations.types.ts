@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { OperationsSchema, OperationsInsertSchema, OperationsGeneratedInsertSchema, OperationsUpdateSchema, OperationsIdUpdateSchema, OperationsIdDeleteSchema } from "./operations.schema";
+import { OperationsSchema, OperationsPeriodSchema, OperationsOldestDateSchema, OperationsInsertSchema, OperationsGeneratedInsertSchema, OperationsUpdateSchema, OperationsIdUpdateSchema, OperationsIdDeleteSchema } from "./operations.schema";
 
 
 /* SELECT */
 export type Operation = z.infer<typeof OperationsSchema>;
+export type OperationsPeriod = z.infer<typeof OperationsPeriodSchema>;
+export type OperationsOldestDate = z.infer<typeof OperationsOldestDateSchema>;
 
 /* INSERT */
 export type OperationInsert = z.infer<typeof OperationsInsertSchema>;

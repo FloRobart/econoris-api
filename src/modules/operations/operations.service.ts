@@ -1,6 +1,6 @@
-import { Operation, OperationGeneratedInsert, OperationInsert, OperationUpdate } from './operations.types';
+import { Operation, OperationGeneratedInsert, OperationInsert, OperationsOldestDate, OperationsPeriod, OperationUpdate } from './operations.types';
 import * as OperationsRepository from './operations.repository';
-import { OperationsGeneratedInsertSchema, OperationsSchema, OperationsUpdateSchema } from './operations.schema';
+import { OperationsGeneratedInsertSchema, OperationsOldestDateSchema, OperationsSchema, OperationsUpdateSchema } from './operations.schema';
 import { ZodError } from 'zod';
 import { AppError } from '../../core/models/AppError.model';
 import { addDays, addWeeks, addMonths, isAfter, isValid, endOfMonth, getDaysInMonth, setDate } from 'date-fns';
@@ -21,17 +21,36 @@ const MAX_OPERATIONS_GENERATED_AT_ONCE = 1000;
 /* SELECT */
 /*========*/
 /**
- * Get all operations for a user.
+ * Get the operations of a user, all of them or only those of a period.
  * @param userId The ID of the user.
+ * @param period The period of the levy dates: both bounds are optional and included.
  * @returns An array of Operation objects.
  * @throws AppError if there is an issue retrieving the operations.
  */
-export async function selectOperations(userId: number): Promise<Operation[]> {
+export async function selectOperations(userId: number, period: OperationsPeriod): Promise<Operation[]> {
     try {
-        const operations = await OperationsRepository.selectOperations(userId);
+        const operations = await OperationsRepository.selectOperations(userId, period);
         return OperationsSchema.array().parse(operations);
     } catch (error) {
         throw (error instanceof ZodError) ? new AppError("Failed to parse operations", 500) : error;
+    }
+}
+
+/**
+ * Get the levy date of the oldest operation of a user.
+ * The clients that load the operations by periods know with it when nothing older is left.
+ * @param userId The ID of the user.
+ * @returns The levy date of the oldest operation, or null if the user has no operation.
+ * @throws AppError if there is an issue retrieving the date.
+ */
+export async function selectOldestOperationDate(userId: number): Promise<OperationsOldestDate | null> {
+    try {
+        const oldestLevyDate = await OperationsRepository.selectOldestLevyDate(userId);
+        if (!oldestLevyDate) return null;
+
+        return OperationsOldestDateSchema.parse({ oldest_levy_date: oldestLevyDate });
+    } catch (error) {
+        throw (error instanceof ZodError) ? new AppError("Failed to parse the oldest operation date", 500) : error;
     }
 }
 
