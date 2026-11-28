@@ -70,6 +70,22 @@
  *           exemple: "2024-01-01T00:00:00.000Z"
  */
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     OperationsOldestDate:
+ *       type: object
+ *       required:
+ *         - oldest_levy_date
+ *       properties:
+ *         oldest_levy_date:
+ *           type: string
+ *           format: date
+ *           description: Levy day of the oldest operation of the user
+ *           example: "2024-03-12"
+ */
+
 
 /*========*/
 /* INSERT */

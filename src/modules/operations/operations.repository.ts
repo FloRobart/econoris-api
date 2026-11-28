@@ -1,6 +1,6 @@
 import { AppError } from "../../core/models/AppError.model";
-import { Database } from "../../core/models/Database.model";
-import { Operation, OperationGeneratedInsert, OperationInsert, OperationUpdate } from "./operations.types";
+import { Database, Query } from "../../core/models/Database.model";
+import { Operation, OperationGeneratedInsert, OperationInsert, OperationsPeriod, OperationUpdate } from "./operations.types";
 import { ResolvedCategory } from "../categories/categories.types";
 
 
@@ -9,17 +9,15 @@ import { ResolvedCategory } from "../categories/categories.types";
 /* SELECT */
 /*========*/
 /**
- * Get all operations for a user.
+ * Get the operations of a user, all of them or only those of a period.
  * @param userId The ID of the user.
+ * @param period The period of the levy dates: both bounds are optional and included.
  * @returns An array of Operation objects.
  * @throws AppError if there is an issue retrieving the operations.
  */
-export async function selectOperations(userId: number): Promise<Operation[]> {
+export async function selectOperations(userId: number, period: OperationsPeriod): Promise<Operation[]> {
     try {
-        let query = "SELECT * FROM operations WHERE user_id = $1;";
-        let values = [userId];
-
-        const operations = await Database.execute<Operation>({ text: query, values: values });
+        const operations = await Database.execute<Operation>(buildSelectOperationsQuery(userId, period));
 
         /* Automatic conversion of amount and costs fields to Number */
         operations.forEach(op => {
@@ -30,6 +28,25 @@ export async function selectOperations(userId: number): Promise<Operation[]> {
         return operations
     } catch (error) {
         throw (error instanceof AppError) ? error : new AppError("Failed to retrieve operations", 500);
+    }
+}
+
+/**
+ * Get the levy date of the oldest operation of a user.
+ * @param userId The ID of the user.
+ * @returns The levy date of the oldest operation, as a day "YYYY-MM-DD", or null if the user has no operation.
+ * @throws AppError if there is an issue retrieving the date.
+ */
+export async function selectOldestLevyDate(userId: number): Promise<string | null> {
+    try {
+        /* to_char gives the day as it is stored: the pg driver would turn a date into a JavaScript Date
+           at midnight in the time zone of the server, which can shift it to the day before */
+        const query = "SELECT to_char(MIN(levy_date), 'YYYY-MM-DD') AS oldest_levy_date FROM operations WHERE user_id = $1;";
+
+        const rows = await Database.execute<{ oldest_levy_date: string | null }>({ text: query, values: [userId] });
+        return rows[0]?.oldest_levy_date ?? null;
+    } catch (error) {
+        throw (error instanceof AppError) ? error : new AppError("Failed to retrieve the oldest operation date", 500);
     }
 }
 
@@ -211,4 +228,31 @@ export async function deleteOperations(userId: number, operationId: number): Pro
     } catch (error) {
         throw (error instanceof AppError) ? error : new AppError("Failed to delete operations", 500);
     }
+}
+
+
+/*===========*/
+/* UTILITIES */
+/*===========*/
+/**
+ * Build the query that selects the operations of a user, limited to a period when one is given.
+ * @param userId The ID of the user.
+ * @param period The period of the levy dates: both bounds are optional and included.
+ * @returns The query to execute.
+ */
+function buildSelectOperationsQuery(userId: number, period: OperationsPeriod): Query {
+    const values: (string | number)[] = [userId];
+    let text = "SELECT * FROM operations WHERE user_id = $1";
+
+    if (period.start_date) {
+        values.push(period.start_date);
+        text += ` AND levy_date >= $${values.length}`;
+    }
+
+    if (period.end_date) {
+        values.push(period.end_date);
+        text += ` AND levy_date <= $${values.length}`;
+    }
+
+    return { text: text + ";", values };
 }

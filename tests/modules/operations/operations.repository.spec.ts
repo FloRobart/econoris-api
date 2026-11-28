@@ -29,9 +29,48 @@ describe('Operations repository tests', () => {
 
 
     it('Selects only the operations of the user', async () => {
-        await OperationsRepository.selectOperations(USER_ID);
+        await OperationsRepository.selectOperations(USER_ID, {});
 
+        expect(executeMock).toHaveBeenCalledWith({ text: expect.stringContaining('WHERE user_id = $1;'), values: [USER_ID] });
+    });
+
+
+    it('Selects only the operations of the period, both days included', async () => {
+        await OperationsRepository.selectOperations(USER_ID, { start_date: '2026-06-01', end_date: '2026-08-31' });
+
+        expect(executeMock).toHaveBeenCalledWith({
+            text: expect.stringContaining('WHERE user_id = $1 AND levy_date >= $2 AND levy_date <= $3;'),
+            values: [USER_ID, '2026-06-01', '2026-08-31'],
+        });
+    });
+
+
+    it('Selects every upcoming operation when the period has no end', async () => {
+        await OperationsRepository.selectOperations(USER_ID, { start_date: '2026-09-01' });
+
+        expect(executeMock).toHaveBeenCalledWith({ text: expect.stringContaining('WHERE user_id = $1 AND levy_date >= $2;'), values: [USER_ID, '2026-09-01'] });
+    });
+
+
+    it('Numbers the end of a period without start right after the user', async () => {
+        await OperationsRepository.selectOperations(USER_ID, { end_date: '2026-08-31' });
+
+        expect(executeMock).toHaveBeenCalledWith({ text: expect.stringContaining('WHERE user_id = $1 AND levy_date <= $2;'), values: [USER_ID, '2026-08-31'] });
+    });
+
+
+    it('Selects the oldest levy date among the operations of the user only', async () => {
+        executeMock.mockResolvedValue([{ oldest_levy_date: '2024-03-12' }]);
+
+        await expect(OperationsRepository.selectOldestLevyDate(USER_ID)).resolves.toBe('2024-03-12');
         expect(executeMock).toHaveBeenCalledWith({ text: expect.stringContaining('WHERE user_id = $1'), values: [USER_ID] });
+    });
+
+
+    it('Finds no oldest levy date for a user without operation', async () => {
+        executeMock.mockResolvedValue([{ oldest_levy_date: null }]);
+
+        await expect(OperationsRepository.selectOldestLevyDate(USER_ID)).resolves.toBeNull();
     });
 
 

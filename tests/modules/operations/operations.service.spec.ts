@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { AppError } from '../../../src/core/models/AppError.model';
 import * as OperationsRepository from '../../../src/modules/operations/operations.repository';
-import { insertMissingOperations, insertOperations } from '../../../src/modules/operations/operations.service';
+import { insertMissingOperations, insertOperations, selectOldestOperationDate } from '../../../src/modules/operations/operations.service';
 import { Operation, OperationGeneratedInsert, OperationInsert } from '../../../src/modules/operations/operations.types';
 import { updateSubscriptionsLastGeneratedAt } from '../../../src/modules/subscriptions/subscriptions.service';
 import { Subscription } from '../../../src/modules/subscriptions/subscriptions.types';
@@ -13,6 +13,7 @@ import { resolveCategory } from '../../../src/modules/categories/categories.serv
 jest.mock('../../../src/modules/operations/operations.repository', () => ({
     insertBulkOperations: jest.fn(),
     insertOperations: jest.fn(),
+    selectOldestLevyDate: jest.fn(),
 }));
 jest.mock('../../../src/modules/subscriptions/subscriptions.service', () => ({
     updateSubscriptionsLastGeneratedAt: jest.fn(),
@@ -23,6 +24,7 @@ jest.mock('../../../src/modules/categories/categories.service', () => ({
 
 const insertBulkOperationsMock = OperationsRepository.insertBulkOperations as jest.Mock;
 const insertOperationsMock = OperationsRepository.insertOperations as jest.Mock;
+const selectOldestLevyDateMock = OperationsRepository.selectOldestLevyDate as jest.Mock;
 const updateLastGeneratedAtMock = updateSubscriptionsLastGeneratedAt as jest.Mock;
 const resolveCategoryMock = resolveCategory as jest.Mock;
 
@@ -135,6 +137,27 @@ describe('insertMissingOperations tests', () => {
         }));
 
         expect(getInsertedLevyDates()).toEqual(['2026-11-01']);
+    });
+});
+
+
+
+/**
+ * selectOldestOperationDate tests: the clients stop loading older operations with this date.
+ */
+describe('selectOldestOperationDate tests', () => {
+    it('Gives the levy date of the oldest operation of the user', async () => {
+        selectOldestLevyDateMock.mockResolvedValue('2024-03-12');
+
+        await expect(selectOldestOperationDate(42)).resolves.toEqual({ oldest_levy_date: '2024-03-12' });
+        expect(selectOldestLevyDateMock).toHaveBeenCalledWith(42);
+    });
+
+
+    it('Gives no date to a user without operation', async () => {
+        selectOldestLevyDateMock.mockResolvedValue(null);
+
+        await expect(selectOldestOperationDate(42)).resolves.toBeNull();
     });
 });
 
